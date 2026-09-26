@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assisteens Life Skills - 5-Year Budget & Goal Simulator</title>
+    <!-- Chart.js CDN for dynamic charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            position: relative;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 { font-size: 1.6rem; color: var(--primary); margin: 0; }
+        .subtitle { color: #718096; font-size: 0.95rem; margin-top: 4px; }
+
+        .popout-btn {
+            background-color: #edf2f7;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+        .popout-btn:hover { background-color: #e2e8f0; }
+
+        .presets {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .preset-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .preset-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-frugal { background-color: var(--success); }
+        .btn-balanced { background-color: var(--accent); }
+        .btn-spender { background-color: var(--danger); }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 25px;
+        }
+
+        .panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #4a5568;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #cbd5e0;
+            outline: none;
+        }
+
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #edf2f7;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .card-label { font-size: 0.75rem; font-weight: 700; color: #a0aec0; text-transform: uppercase; }
+        .card-val { font-size: 1.3rem; font-weight: 800; color: var(--primary); margin-top: 6px; }
+
+        .chart-box {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .advisor-note {
+            margin-top: 15px;
+            padding: 12px 15px;
+            border-radius: 8px;
+            background-color: #ebf8ff;
+            border-left: 4px solid var(--accent);
+            font-size: 0.9rem;
+            color: #2b6cb0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="dashboard" id="dashboard">
+    <div class="header-bar">
+        <div>
+            <h1>Assisteens Interactive Budget Builder</h1>
+            <div class="subtitle">5-Year Goal Simulator ($100,000 Base Starting Salary)</div>
+        </div>
+        <button class="popout-btn" onclick="togglePopOut()">↗ Pop Out / Full Screen</button>
+    </div>
+
+    <!-- Scenario Presets -->
+    <div class="presets">
+        <button class="preset-btn btn-frugal" onclick="setPreset('frugal')">Scenario A: Super Saver (Fast-Track)</button>
+        <button class="preset-btn btn-balanced" onclick="setPreset('balanced')">Scenario B: Balanced Builder</button>
+        <button class="preset-btn btn-spender" onclick="setPreset('spender')">Scenario C: Lifestyle Creep</button>
+    </div>
+
+    <div class="grid-layout">
+        <!-- Decision Controls Panel -->
+        <div class="panel">
+            <h3 style="margin-top:0; color: var(--primary);">Decision Panel</h3>
+            
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Housing (Rent/Roommate)</span>
+                    <span id="val-housing">$1,100/mo</span>
+                </div>
+                <input type="range" id="housing" min="800" max="3500" step="50" value="1100" oninput="updateSim()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Vehicle & Insurance</span>
+                    <span id="val-car">$400/mo</span>
+                </div>
+                <input type="range" id="car" min="200" max="1500" step="50" value="400" oninput="updateSim()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Food & Dining</span>
+                    <span id="val-food">$400/mo</span>
+                </div>
+                <input type="range" id="food" min="300" max="1500" step="50" value="400" oninput="updateSim()">
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Fun, Travel & Leisure</span>
+                    <span id="val-fun">$150/mo</span>
+                </div>
+                <input type="range" id="fun" min="100" max="1000" step="50" value="150" oninput="updateSim()">
+            </div>
+
+            <div class="advisor-note" id="advisor-text">
+                <strong>Advisor Feedback:</strong> You're on track to buy a home quickly!
+            </div>
+        </div>
+
+        <!-- Visual Progress & Results -->
+        <div class="panel">
+            <div class="metric-cards">
+                <div class="card">
+                    <div class="card-label">Monthly Savings</div>
+                    <div class="card-val" id="net-savings">$2,478</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Time to $70k Down Payment</div>
+                    <div class="card-val" id="time-goal">2.3 Yrs</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">5-Yr Net Worth</div>
+                    <div class="card-val" id="net-worth">$236,900</div>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <canvas id="growthChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let myChart;
+    const NET_CASH_AVAILABLE = 4928; // $8333 Gross - $3005 Taxes/Insurance/401k Match - $400 Loans
+
+    function initChart() {
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+                datasets: [
+                    { label: 'Down Payment Fund (HYSA 4.5%)', data: [], backgroundColor: '#2ecc71' },
+                    { label: 'Retirement (401k + Employer Match)', data: [], backgroundColor: '#3498db' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, ticks: { callback: v => '$' + v.toLocaleString() } }
+                }
+            }
+        });
+    }
+
+    function updateSim() {
+        const h = parseInt(document.getElementById('housing').value);
+        const c = parseInt(document.getElementById('car').value);
+        const f = parseInt(document.getElementById('food').value);
+        const fn = parseInt(document.getElementById('fun').value);
+
+        document.getElementById('val-housing').innerText = `$${h.toLocaleString()}/mo`;
+        document.getElementById('val-car').innerText = `$${c.toLocaleString()}/mo`;
+        document.getElementById('val-food').innerText = `$${f.toLocaleString()}/mo`;
+        document.getElementById('val-fun').innerText = `$${fn.toLocaleString()}/mo`;
+
+        const totalExpenses = h + c + f + fn;
+        const monthlySavings = NET_CASH_AVAILABLE - totalExpenses;
+
+        const savElem = document.getElementById('net-savings');
+        savElem.innerText = `$${monthlySavings.toLocaleString()}`;
+        savElem.style.color = monthlySavings < 0 ? '#e74c3c' : '#2c3e50';
+
+        // Time to Goal ($70k)
+        const timeElem = document.getElementById('time-goal');
+        if (monthlySavings <= 0) {
+            timeElem.innerText = "Never (Deficit)";
+            timeElem.style.color = '#e74c3c';
+        } else {
+            const yrs = (70000 / monthlySavings / 12).toFixed(1);
+            timeElem.innerText = `${yrs} Yrs`;
+            timeElem.style.color = yrs <= 3.5 ? '#2ecc71' : '#3498db';
+        }
+
+        // Advisor Feedback Text
+        const advText = document.getElementById('advisor-text');
+        if (monthlySavings < 0) {
+            advText.innerHTML = "<strong>⚠️ Danger:</strong> Spending exceeds net income! You are taking on credit card debt and postponing all mid-term goals.";
+            advText.style.backgroundColor = "#fff5f5";
+            advText.style.borderLeftColor = "#e74c3c";
+            advText.style.color = "#c53030";
+        } else if (monthlySavings < 1000) {
+            advText.innerHTML = "<strong>💡 Advisor Note:</strong> Moderate savings pace. You'll reach your home down payment goal in 6–9 years.";
+            advText.style.backgroundColor = "#fffaf0";
+            advText.style.borderLeftColor = "#dd6b20";
+            advText.style.color = "#c05621";
+        } else {
+            advText.innerHTML = "<strong>🚀 Fast-Track:</strong> Excellent savings rate! You will reach your $70k down payment goal in under 3 years.";
+            advText.style.backgroundColor = "#f0fff4";
+            advText.style.borderLeftColor = "#2ecc71";
+            advText.style.color = "#276749";
+        }
+
+        // Update 5-Year Projections
+        let hysaData = [], k401Data = [];
+        let curHysa = 0, cur401k = 0;
+        const hysaRate = 0.045 / 12;
+        const k401Rate = 0.07 / 12;
+
+        for (let m = 1; m <= 60; m++) {
+            curHysa = (curHysa + monthlySavings) * (1 + hysaRate);
+            cur401k = (cur401k + 1000) * (1 + k401Rate); // $500 contribution + $500 match
+            if (m % 12 === 0) {
+                hysaData.push(Math.max(0, Math.round(curHysa)));
+                k401Data.push(Math.round(cur401k));
+            }
+        }
+
+        document.getElementById('net-worth').innerText = `$${Math.round(curHysa + cur401k).toLocaleString()}`;
+
+        myChart.data.datasets[0].data = hysaData;
+        myChart.data.datasets[1].data = k401Data;
+        myChart.update();
+    }
+
+    function setPreset(type) {
+        if (type === 'frugal') {
+            document.getElementById('housing').value = 1100;
+            document.getElementById('car').value = 400;
+            document.getElementById('food').value = 400;
+            document.getElementById('fun').value = 150;
+        } else if (type === 'balanced') {
+            document.getElementById('housing').value = 2200;
+            document.getElementById('car').value = 650;
+            document.getElementById('food').value = 700;
+            document.getElementById('fun').value = 400;
+        } else if (type === 'spender') {
+            document.getElementById('housing').value = 3100;
+            document.getElementById('car').value = 1050;
+            document.getElementById('food').value = 1200;
+            document.getElementById('fun').value = 800;
+        }
+        updateSim();
+    }
+
+    function togglePopOut() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    window.onload = () => { initChart(); updateSim(); };
+</script>
+
+</body>
+</html>
